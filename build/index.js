@@ -40,47 +40,161 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var discord_js_1 = __importDefault(require("discord.js"));
+var ytdl_core_1 = __importDefault(require("ytdl-core"));
 var client = new discord_js_1.default.Client();
+var dispatcher;
+var connection;
 var config_json_1 = require("./config.json");
-client.on('ready', function () {
+client.on('debug', console.log);
+client.once('ready', function () {
+    //setChannelEmbed('701464024180588575')
     console.log('Ready!');
 });
+client.once('shardReconnecting', function () {
+    console.log('Reconnecting!');
+});
+client.once('disconnect', function () {
+    console.log('Disconnect!');
+});
 client.login(config_json_1.token);
-client.removeAllListeners();
 client.on('message', function (message) { return __awaiter(void 0, void 0, void 0, function () {
-    var serverReply, connection;
     return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                console.log(message.content);
-                if (!message.content.startsWith(config_json_1.prefix) || message.author.bot)
-                    return [2 /*return*/];
-                serverReply = message.guild
-                    ? message.guild.name
-                    : "I don't think this is a server.. right?";
-                command('ping', message, 'https://www.youtube.com/watch?v=gHQP6uOhCg0');
-                command('server', message, serverReply);
-                if (!message.guild)
-                    return [2 /*return*/];
-                if (!(message.content === '/join')) return [3 /*break*/, 3];
-                console.log('join');
-                if (!(message.member && message.member.voice.channel)) return [3 /*break*/, 2];
-                return [4 /*yield*/, message.member.voice.channel.join()];
-            case 1:
-                connection = _a.sent();
-                console.log(connection);
-                _a.label = 2;
-            case 2: return [3 /*break*/, 4];
-            case 3:
-                message.reply('You need to join a voice channel first!');
-                _a.label = 4;
-            case 4: return [2 /*return*/];
-        }
+        console.log('Message: ' + message.content);
+        commands(message);
+        return [2 /*return*/];
     });
 }); });
-function command(command, message, reply) {
+function commands(message) {
+    if (!message.content.startsWith(config_json_1.prefix) || message.author.bot)
+        return;
+    var command = message.content;
+    if (message.content.indexOf(' ') !== -1) {
+        command = command.substring(0, message.content.indexOf(' '));
+    }
+    switch (command) {
+        case '!ping':
+            commandHandler('ping', message, 'https://www.youtube.com/watch?v=gHQP6uOhCg0');
+            break;
+        case '!server':
+            {
+                var serverReply = message.guild
+                    ? message.guild.name
+                    : "I don't think this is a server.. right?";
+                commandHandler('server', message, serverReply);
+            }
+            break;
+        case '!music':
+            handleMusicCommands(message);
+            break;
+        case '!ids':
+            if (message.guild)
+                message.reply(message.guild.id);
+            break;
+        default:
+            message.reply('unknown command');
+    }
+}
+function setChannelEmbed(channelId) {
+    return __awaiter(this, void 0, void 0, function () {
+        var channel, exampleEmbed;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log('hello');
+                    return [4 /*yield*/, client.channels.fetch(channelId)];
+                case 1:
+                    channel = (_a.sent());
+                    exampleEmbed = new discord_js_1.default.MessageEmbed()
+                        .setColor('#0099ff')
+                        .setTitle('Some title')
+                        .setURL('https://discord.js.org/')
+                        .setAuthor('Some name', 'https://i.imgur.com/wSTFkRM.png', 'https://discord.js.org')
+                        .setDescription('Some description here')
+                        .setThumbnail('https://i.imgur.com/wSTFkRM.png')
+                        .addFields({ name: 'Regular field title', value: 'Some value here' }, { name: '\u200B', value: '\u200B' }, { name: 'Inline field title', value: 'Some value here', inline: true }, { name: 'Inline field title', value: 'Some value here', inline: true })
+                        .addField('Inline field title', 'Some value here', true)
+                        .setImage('https://i.imgur.com/wSTFkRM.png')
+                        .setTimestamp()
+                        .setFooter('Some footer text here', 'https://i.imgur.com/wSTFkRM.png');
+                    channel.send(exampleEmbed);
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function commandHandler(command, message, reply) {
     if (message.content.startsWith(config_json_1.prefix + command)) {
         message.channel.send(reply);
     }
+}
+function handleMusicCommands(message) {
+    return __awaiter(this, void 0, void 0, function () {
+        var args, firstArg, _a;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    args = message.content.slice(config_json_1.prefix.length).split(/ +/);
+                    firstArg = args[1];
+                    if (args.length < 2) {
+                        message.reply('no args given for music command');
+                        return [2 /*return*/];
+                    }
+                    _a = firstArg;
+                    switch (_a) {
+                        case 'join': return [3 /*break*/, 1];
+                        case 'play': return [3 /*break*/, 3];
+                        case 'pause': return [3 /*break*/, 4];
+                        case 'resume': return [3 /*break*/, 5];
+                    }
+                    return [3 /*break*/, 6];
+                case 1: return [4 /*yield*/, joinChannel(message)];
+                case 2:
+                    connection = _b.sent();
+                    console.log(connection);
+                    return [3 /*break*/, 7];
+                case 3:
+                    console.log('play', connection);
+                    if (connection && args[2]) {
+                        dispatcher = playYoutube(args[2], connection);
+                    }
+                    else {
+                        message.reply('No link supplied in args');
+                    }
+                    return [3 /*break*/, 7];
+                case 4:
+                    if (dispatcher) {
+                        dispatcher.pause();
+                    }
+                    return [3 /*break*/, 7];
+                case 5:
+                    if (dispatcher) {
+                        dispatcher.resume();
+                    }
+                    return [3 /*break*/, 7];
+                case 6: return [3 /*break*/, 7];
+                case 7: return [2 /*return*/];
+            }
+        });
+    });
+}
+function joinChannel(message) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!(message.member && message.member.voice.channel)) return [3 /*break*/, 2];
+                    return [4 /*yield*/, message.member.voice.channel.join()];
+                case 1: return [2 /*return*/, _a.sent()];
+                case 2:
+                    message.reply('You need to join a voice channel first!');
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+function playYoutube(link, connection) {
+    return connection.play(ytdl_core_1.default(link, {
+        filter: 'audioonly',
+    }), { volume: 0.5 });
 }
 //# sourceMappingURL=index.js.map

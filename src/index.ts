@@ -1,4 +1,9 @@
-import Discord, { Message, StreamDispatcher, VoiceConnection } from 'discord.js'
+import Discord, {
+  Message,
+  StreamDispatcher,
+  VoiceConnection,
+  TextChannel,
+} from 'discord.js'
 import Ytdl from 'ytdl-core'
 
 const client = new Discord.Client()
@@ -11,6 +16,7 @@ import { token, prefix } from './config.json'
 client.on('debug', console.log)
 
 client.once('ready', () => {
+  //setChannelEmbed('701464024180588575')
   console.log('Ready!')
 })
 client.once('shardReconnecting', () => {
@@ -21,8 +27,6 @@ client.once('disconnect', () => {
 })
 
 client.login(token)
-
-client.removeAllListeners()
 
 client.on('message', async message => {
   console.log('Message: ' + message.content)
@@ -54,9 +58,39 @@ function commands(message: Message): void {
     case '!music':
       handleMusicCommands(message)
       break
+    case '!ids':
+      if (message.guild) message.reply(message.guild.id)
+      break
     default:
       message.reply('unknown command')
   }
+}
+
+async function setChannelEmbed(channelId: string): Promise<void> {
+  console.log('hello')
+  const channel = (await client.channels.fetch(channelId)) as TextChannel
+  const exampleEmbed = new Discord.MessageEmbed()
+    .setColor('#0099ff')
+    .setTitle('Some title')
+    .setURL('https://discord.js.org/')
+    .setAuthor(
+      'Some name',
+      'https://i.imgur.com/wSTFkRM.png',
+      'https://discord.js.org',
+    )
+    .setDescription('Some description here')
+    .setThumbnail('https://i.imgur.com/wSTFkRM.png')
+    .addFields(
+      { name: 'Regular field title', value: 'Some value here' },
+      { name: '\u200B', value: '\u200B' },
+      { name: 'Inline field title', value: 'Some value here', inline: true },
+      { name: 'Inline field title', value: 'Some value here', inline: true },
+    )
+    .addField('Inline field title', 'Some value here', true)
+    .setImage('https://i.imgur.com/wSTFkRM.png')
+    .setTimestamp()
+    .setFooter('Some footer text here', 'https://i.imgur.com/wSTFkRM.png')
+  channel.send(exampleEmbed)
 }
 
 function commandHandler(
@@ -125,5 +159,6 @@ function playYoutube(
     Ytdl(link, {
       filter: 'audioonly',
     }),
+    { volume: 0.5 },
   )
 }
